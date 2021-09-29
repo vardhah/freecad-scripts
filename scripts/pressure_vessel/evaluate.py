@@ -20,7 +20,7 @@ import sys
 
 def import_freecad():
     # https://wiki.freecadweb.org/Embedding_FreeCAD
-    global FreeCAD, Part, Sketcher, GmshTools
+    global FreeCAD, Part, Sketcher, GmshTools, ccxtools
     freecad_libs = [
         '/usr/local/lib/FreeCAD.so',
     ]
@@ -33,6 +33,7 @@ def import_freecad():
             import Part
             import Sketcher
             from femmesh.gmshtools import GmshTools
+            from femtools import ccxtools
             return
     else:
         print("FreeCAD library was not found!")
@@ -42,10 +43,13 @@ def import_freecad():
 import_freecad()
 #help(FreeCAD)
 
+def print_objects(doc):
+    print("Objects:", ", ".join([obj.Name for obj in doc.Objects]))
+
 def print_properties(obj):
     print(obj.Name, "properties:")
     for name in obj.PropertiesList:
-        print(name, "=", getattr(obj, name))
+        print("   ", name, "=", getattr(obj, name))
 
 def get_constraint(obj: Sketcher, name: str) -> Sketcher.Constraint:
     for con in obj.Constraints:
@@ -54,10 +58,10 @@ def get_constraint(obj: Sketcher, name: str) -> Sketcher.Constraint:
     raise ValueError("Constraint " + name + " not found")
 
 
+# https://wiki.freecadweb.org/FEM_Tutorial_Python
 filename = 'capsule.FCStd'
 doc = FreeCAD.open(filename)
-# for obj in doc.Objects:
-#     print(obj.Name)
+# print_objects(doc)
 
 obj = doc.getObject("Sketch")
 obj.setDatum('thickness', 2.0)
@@ -70,12 +74,14 @@ obj.recompute(True)
 
 obj = doc.getObject('FEMMeshGmsh')
 # print_properties(obj)
-obj.CharacteristicLengthMax = 5.0
+# print(obj.FemMesh)
+obj.CharacteristicLengthMax = 2.0
 mesh = GmshTools(obj)
 err = mesh.create_mesh()
 if err:
     print("Meshing error:", err)
 # print_properties(obj)
+print(obj.FemMesh)
 
 obj = doc.getObject('ConstraintPressure')
 obj.Pressure = 123.0
@@ -88,3 +94,30 @@ obj.Material = {
     'PoissonRatio': "0.30",
     'Density': "7900 kg/m^3",
 }
+
+fea = ccxtools.FemToolsCcx(
+    doc.getObject('Analysis'), 
+    doc.getObject('SolverCcxTools'))
+fea.update_objects()
+fea.setup_working_dir()
+fea.setup_ccx()
+err = fea.check_prerequisites()
+if err:
+    print("FEM error:", err)
+
+fea.purge_results()
+fea.write_inp_file()
+fea.ccx_run()
+fea.load_results()
+
+# print_objects(doc)
+obj = doc.getObject('CCX_Results')
+print(obj.PropertiesList)
+print("vonMises", len(obj.vonMises), max(obj.vonMises))
+print(obj.ResultType)
+print(obj.Stats)
+
+fea.purge_results()
+if doc.getObject('ccx_dat_file'):
+    doc.removeObject('ccx_dat_file')
+# print_objects(doc)
