@@ -27,8 +27,7 @@ for lib in freecad_libs:
         if path not in sys.path:
             sys.path.append(path)
         import FreeCAD
-        import Part
-        import Sketcher
+        from FreeCAD import Units
         from femmesh.gmshtools import GmshTools
         from femtools.ccxtools import FemToolsCcx
         break
@@ -43,6 +42,11 @@ class PressureVessel(object):
     """
 
     def __init__(self, filename: str, debug=True):
+        """
+        Creates a pressure vessel analysis class that can be used to run
+        multiple simulations for the given design template by changing its
+        parameters.
+        """
         self.filename = filename
         self.debug = debug
 
@@ -61,40 +65,125 @@ class PressureVessel(object):
             raise ValueError("FEM error: " + err)
 
     def print_info(self):
+        """
+        Prints out all relevant information from the design template
+        and the output of design analysis.
+        """
         names = [obj.Name for obj in self.doc.Objects]
         print("Object names:", ", ".join(names))
 
-        print("Sketch parameters:")
         obj = self.doc.getObject('Sketch')
+        print("Sketch parameters:")
         for c in obj.Constraints:
             if not c.Name:
                 continue
             print("  " + c.Name, "=", c.Value, "mm")
 
-        print("FEM parameters:")
         obj = self.doc.getObject('ConstraintPressure')
-        print("  pressure =", obj.Pressure, "N")
+        print("FEM parameters:")
+        print("  pressure =", obj.Pressure, "MPa")
         obj = self.doc.getObject('FEMMeshGmsh')
-        print("  mesh_max =", obj.CharacteristicLengthMax)
+        print("  mesh_length =", obj.CharacteristicLengthMax)
 
-        print("Material parameters:")
         obj = self.doc.getObject('MaterialSolid')
+        print("Material parameters:")
         print("  youngs_modulus =", obj.Material['YoungsModulus'])
         print("  poisson_ratio =", obj.Material['PoissonRatio'])
-        print("  density =", obj.Material['Density'])
         print("  tensile_strength =", obj.Material['UltimateTensileStrength'])
+        print("  density =", obj.Material['Density'])
 
-    def set_sketch_param(self, param: str, value: float):
+        obj = self.doc.getObject('CCX_Results')
+        if obj:
+            print("FEM results:")
+            print("  vonmises_stress = {:.2f} MPa".format(max(obj.vonMises)))
+            print("  tresca_stress = {:.2f} MPa".format(max(obj.MaxShear)))
+            print("  displacement = {:.2f} mm".format(
+                max(obj.DisplacementLengths)))
+#            print("  pass_status =", "true" if self.get_pass_status() else "false")
+        else:
+            print("FEM Results: None")
+
+    @staticmethod
+    def print_properties(obj):
+        print(obj.Name, "properties:")
+        for name in obj.PropertiesList:
+            print(" ", name, "=", getattr(obj, name))
+
+    def set_sketch_length(self, param: str, value: float):
+        """
+        Sets a length constraint of the sketch object in millimeters.
+        """
         obj = self.doc.getObject('Sketch')
-        obj.setDatum(param, value)
+        obj.setDatum(param, Units.Quantity(value, Units.Unit('mm')))
+
+    def get_sketch_length(self, param: str) -> float:
+        obj = self.doc.getObject('Sketch')
+        return obj.getDatum(param).getValueAs('mm')
 
     def set_pressure(self, value: float):
+        """
+        Sets the outside pressure acting on the vessel in mega pascals.
+        """
         obj = self.doc.getObject('ConstraintPressure')
-        obj.Pressure = value
+        obj.Pressure = float(value)
 
-    def set_mesh_max(self, value: float):
+    def get_pressure(self) -> float:
+        obj = self.doc.getObject('ConstraintPressure')
+        return float(obj.Pressure)
+
+    def set_mesh_length(self, value: float):
+        """
+        Sets the maximum edge length for the meshing algorithm in millimeters.
+        """
         obj = self.doc.getObject('FEMMeshGmsh')
-        obj.CharacteristicLengthMax = value
+        obj.CharacteristicLengthMax = Units.Quantity(value, Units.Unit('mm'))
+
+    def get_mesh_length(self) -> float:
+        obj = self.doc.getObject('FEMMeshGmsh')
+        return obj.CharacteristicLengthMax.getValueAs('mm')
+
+    def set_youngs_modulus(self, value: float):
+        """
+        Sets the Youngs modulus of the material in mega pascals.
+        """
+        obj = self.doc.getObject('MaterialSolid')
+        mat = dict(obj.Material)
+        mat['YoungsModulus'] = str(value) + ' MPa'
+        obj.Material = mat
+
+    def get_youngs_modulus(self) -> float:
+        obj = self.doc.getObject('MaterialSolid')
+        return Units.Quantity(obj.Material['YoungsModulus']).getValueAs('MPa')
+
+    def set_poisson_ratio(self, value: float):
+        """
+        Sets the poisson ratio of the material.
+        """
+        obj = self.doc.getObject('MaterialSolid')
+        mat = dict(obj.Material)
+        mat['PoissonRatio'] = str(value)
+        obj.Material = mat
+
+    def get_poisson_ratio(self):
+        obj = self.doc.getObject('MaterialSolid')
+        return float(obj.Material['PoissonRatio'])
+
+    def set_tensile_strength(self, value: float):
+        """
+        Sets the ultimate tensile strength of the material in mega pascals.
+        """
+        obj = self.doc.getObject('MaterialSolid')
+        mat = dict(obj.Material)
+        mat['UltimateTensileStrength'] = str(value) + ' MPa'
+        obj.Material = mat
+
+    def get_tensile_strength(self) -> float:
+        obj = self.doc.getObject('MaterialSolid')
+        return Units.Quantity(obj.Material['UltimateTensileStrength']).getValueAs('MPa')
+
+    def set_density(self, value: float):
+        obj = self.doc.getObject('MaterialSolid')
+        obj.Material['Density'] = value
 
     def run_analysis(self):
         self.fea.purge_results()
@@ -125,95 +214,37 @@ class PressureVessel(object):
         obj = self.doc.getObject('CCX_Results')
         assert obj.ResultType == 'Fem::ResultMechanical'
         if self.debug:
-            print(max(obj.vonMises), "max stress")
+            print("vonMises stress: {:.2f} MPa".format(max(obj.vonMises)))
 
-    def get_vonmises_max(self):
+    def get_vonmises_stress(self) -> float:
         obj = self.doc.getObject('CCX_Results')
         return max(obj.vonMises)
 
+    def get_tresca_stress(self) -> float:
+        obj = self.doc.getObject('CCX_Results')
+        return max(obj.MaxShear)
+
+    def get_displacement(self) -> float:
+        obj = self.doc.getObject('CCX_Results')
+        return max(obj.DisplacementLengths)
+
+    def get_pass_status(self) -> bool:
+        obj = self.doc.getObject('MaterialSolid')
+        return self.get_vonmises_stress() <= obj.Material['UltimateTensileStrength']
+
 
 vessel = PressureVessel('capsule.FCStd')
+# vessel.run_analysis()
+vessel.set_sketch_length('radius', 1.1)
+assert vessel.get_sketch_length('radius') == 1.1
+vessel.set_pressure(2.2)
+assert vessel.get_pressure() == 2.2
+vessel.set_mesh_length(3.3)
+assert vessel.get_mesh_length() == 3.3
+vessel.set_youngs_modulus(4.4)
+assert vessel.get_youngs_modulus() == 4.4
+vessel.set_poisson_ratio(5.5)
+assert vessel.get_poisson_ratio() == 5.5
+vessel.set_tensile_strength(6.6)
+assert vessel.get_tensile_strength() == 6.6
 vessel.print_info()
-vessel.run_analysis()
-vessel.set_mesh_max(1.0)
-vessel.print_info()
-vessel.run_analysis()
-
-if False:
-    def print_objects(doc):
-        print("Objects:", ", ".join([obj.Name for obj in doc.Objects]))
-
-    def print_properties(obj):
-        print(obj.Name, "properties:")
-        for name in obj.PropertiesList:
-            print("   ", name, "=", getattr(obj, name))
-
-    def get_constraint(obj: Sketcher, name: str) -> Sketcher.Constraint:
-        for con in obj.Constraints:
-            if con.Name == name:
-                return con
-        raise ValueError("Constraint " + name + " not found")
-
-    # https://wiki.freecadweb.org/FEM_Tutorial_Python
-    filename = 'capsule.FCStd'
-    doc = FreeCAD.open(filename)
-    # print_objects(doc)
-
-    obj = doc.getObject("Sketch")
-    obj.setDatum('thickness', 2.0)
-    obj.setDatum('radius', 21.0)
-    obj.setDatum('length', 16.0)
-    # print(obj.getDatum('thickness'))
-
-    obj = doc.getObject('Body')
-    obj.recompute(True)
-
-    obj = doc.getObject('FEMMeshGmsh')
-    # print_properties(obj)
-    # print(obj.FemMesh)
-    obj.CharacteristicLengthMax = 2.0
-    mesh = GmshTools(obj)
-    err = mesh.create_mesh()
-    if err:
-        print("Meshing error:", err)
-    # print_properties(obj)
-    print(obj.FemMesh)
-
-    obj = doc.getObject('ConstraintPressure')
-    obj.Pressure = 123.0
-
-    obj = doc.getObject('MaterialSolid')
-    # print(obj.Material)
-    obj.Material = {
-        'Name': "Steel-Generic",
-        'YoungsModulus': "210000 MPa",
-        'PoissonRatio': "0.30",
-        'Density': "7900 kg/m^3",
-    }
-
-    fea = FemToolsCcx(
-        doc.getObject('Analysis'),
-        doc.getObject('SolverCcxTools'))
-    fea.update_objects()
-    fea.setup_working_dir()
-    fea.setup_ccx()
-    err = fea.check_prerequisites()
-    if err:
-        print("FEM error:", err)
-
-    fea.purge_results()
-    fea.write_inp_file()
-    fea.ccx_run()
-    fea.load_results()
-
-    # print_objects(doc)
-    obj = doc.getObject('CCX_Results')
-    print(obj.PropertiesList)
-    print("vonMises", len(obj.vonMises), max(obj.vonMises))
-    print(obj.ResultType)
-    print(obj.Stats)
-
-    fea.purge_results()
-    if doc.getObject('ccx_dat_file'):
-        doc.removeObject('ccx_dat_file')
-    # print_objects(doc)
