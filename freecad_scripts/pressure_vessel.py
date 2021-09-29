@@ -14,26 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import sys
-
-# https://wiki.freecadweb.org/Embedding_FreeCAD
-freecad_libs = [
-    '/usr/local/lib/FreeCAD.so',
-]
-for lib in freecad_libs:
-    if os.path.exists(lib):
-        path = os.path.dirname(lib)
-        if path not in sys.path:
-            sys.path.append(path)
-        import FreeCAD
-        from FreeCAD import Units
-        from femmesh.gmshtools import GmshTools
-        from femtools.ccxtools import FemToolsCcx
-        break
-else:
-    print("FreeCAD library was not found!")
-    sys.exit(1)
+from freecad_scripts.libs import FreeCAD, Units, GmshTools, FemToolsCcx
 
 
 class PressureVessel(object):
@@ -211,6 +192,7 @@ class PressureVessel(object):
         obj = self.doc.getObject('FEMMeshGmsh').FemMesh
         if self.debug:
             print(obj.NodeCount, "nodes,",
+                  obj.EdgeCount, "edges",
                   obj.FaceCount, "faces,",
                   obj.VolumeCount, "volumes")
 
@@ -253,6 +235,21 @@ class PressureVessel(object):
         return self.get_vonmises_stress() >= self.get_tensile_strength()
 
 
-vessel = PressureVessel('capsule.FCStd')
-vessel.run_analysis()
-vessel.print_info()
+def run(args=None):
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('model', type=str, metavar='FILE',
+                        help='a parametric FreeCAD model of the pressure vessel model')
+    args = parser.parse_args(args)
+
+    vessel = PressureVessel(args.model)
+    vessel.set_pressure(1.0)
+    vessel.set_sketch_length('radius', 30)
+    vessel.run_analysis()
+    vessel.print_info()
+
+
+if __name__ == '__main__':
+    run()
