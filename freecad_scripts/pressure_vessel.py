@@ -54,21 +54,27 @@ class PressureVessel(object):
                 continue
             print("  " + c.Name, "=", c.Value, "mm")
 
-        obj = self.doc.getObject('ConstraintPressure')
+        print("Body properties:")
+        print("  body_area = {:.2f} mm^2".format(self.get_body_area()))
+        print("  body_volume = {:.2f} mm^3".format(self.get_body_volume()))
+        print("  outer_area = {:.2f} mm^2".format(self.get_outer_area()))
+        print("  outer_volume = {:.2f} mm^3".format(self.get_outer_volume()))
+        print("  inner_area = {:.2f} mm^2".format(self.get_inner_area()))
+        print("  inner_volume = {:.2f} mm^3".format(self.get_inner_volume()))
+
         print("FEM parameters:")
-        print("  pressure =", obj.Pressure, "MPa")
-        obj = self.doc.getObject('FEMMeshGmsh')
-        print("  mesh_length =", obj.CharacteristicLengthMax)
+        print("  pressure =", self.get_pressure(), "MPa")
+        print("  mesh_length =", self.get_mesh_length(), "mm")
 
         obj = self.doc.getObject('MaterialSolid')
         print("Material parameters:")
-        print("  youngs_modulus =", obj.Material['YoungsModulus'])
-        print("  poisson_ratio =", obj.Material['PoissonRatio'])
-        print("  tensile_strength =", obj.Material['UltimateTensileStrength'])
-        print("  density =", obj.Material['Density'])
+        print("  youngs_modulus =", self.get_youngs_modulus(), "MPa")
+        print("  poisson_ratio =", self.get_poisson_ratio())
+        print("  tensile_strength =", self.get_tensile_strength(), "MPa")
+        print("  density =", self.get_density(), "kg/m^3")
 
         obj = self.doc.getObject('FEMMeshGmsh').FemMesh
-        if obj:
+        if obj and obj.NodeCount:
             print("Mesh properties:")
             print("  nodes =", obj.NodeCount)
             print("  edges =", obj.EdgeCount)
@@ -179,6 +185,33 @@ class PressureVessel(object):
         obj = self.doc.getObject('MaterialSolid')
         return Units.Quantity(obj.Material['Density']).getValueAs('kg/m^3')
 
+    def recompute(self):
+        self.doc.recompute()
+
+    def get_body_area(self):
+        obj = self.doc.getObject('Body')
+        return obj.Shape.Area
+
+    def get_body_volume(self):
+        obj = self.doc.getObject('Body')
+        return obj.Shape.Volume
+
+    def get_outer_area(self):
+        obj = self.doc.getObject('Body')
+        return obj.Shape.OuterShell.Area
+
+    def get_outer_volume(self):
+        obj = self.doc.getObject('Body')
+        return obj.Shape.OuterShell.Volume
+
+    def get_inner_area(self):
+        obj = self.doc.getObject('Body')
+        return obj.Shape.Area - obj.Shape.OuterShell.Area
+
+    def get_inner_volume(self):
+        obj = self.doc.getObject('Body')
+        return obj.Shape.OuterShell.Volume - obj.Shape.Volume
+
     def clean(self):
         """
         Removes all temporary artifacts from the model.
@@ -269,10 +302,7 @@ def run(args=None):
 
     vessel = PressureVessel(args.model)
     # vessel.print_info()
-    vessel.run_analysis()
-    vessel.print_info()
-    vessel.set_pressure(2 * vessel.get_pressure())
-    vessel.run_analysis()
+    # vessel.run_analysis()
     vessel.print_info()
 
 
