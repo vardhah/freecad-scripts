@@ -99,7 +99,7 @@ class PressureVessel(object):
             print("  tresca_stress = {:.2f} MPa".format(max(obj.MaxShear)))
             print("  displacement = {:.2f} mm".format(
                 max(obj.DisplacementLengths)))
-#            print("  pass_status =", "true" if self.get_pass_status() else "false")
+            print("  has_failed =", "true" if self.has_failed() else "false")
         else:
             print("FEM Results: None")
 
@@ -182,8 +182,17 @@ class PressureVessel(object):
         return Units.Quantity(obj.Material['UltimateTensileStrength']).getValueAs('MPa')
 
     def set_density(self, value: float):
+        """
+        Sets the density of the material in kg/m3.
+        """
         obj = self.doc.getObject('MaterialSolid')
-        obj.Material['Density'] = value
+        mat = dict(obj.Material)
+        mat['Density'] = str(value) + ' kg/m^3'
+        obj.Material = mat
+
+    def get_density(self):
+        obj = self.doc.getObject('MaterialSolid')
+        return Units.Quantity(obj.Material['Density']).getValueAs('kg/m^3')
 
     def run_analysis(self):
         self.fea.purge_results()
@@ -217,34 +226,33 @@ class PressureVessel(object):
             print("vonMises stress: {:.2f} MPa".format(max(obj.vonMises)))
 
     def get_vonmises_stress(self) -> float:
+        """
+        Returns the maximum vonMises stress in mega pascals.
+        """
         obj = self.doc.getObject('CCX_Results')
         return max(obj.vonMises)
 
     def get_tresca_stress(self) -> float:
+        """
+        Returns the maximum tresca (shear) stress in mega pascals.
+        """
         obj = self.doc.getObject('CCX_Results')
         return max(obj.MaxShear)
 
     def get_displacement(self) -> float:
+        """
+        Returns the maximum displacement in millimeters.
+        """
         obj = self.doc.getObject('CCX_Results')
         return max(obj.DisplacementLengths)
 
-    def get_pass_status(self) -> bool:
-        obj = self.doc.getObject('MaterialSolid')
-        return self.get_vonmises_stress() <= obj.Material['UltimateTensileStrength']
+    def has_failed(self) -> bool:
+        """
+        Returns if the maximum vonMises stress is larger than the tensile strength.
+        """
+        return self.get_vonmises_stress() >= self.get_tensile_strength()
 
 
 vessel = PressureVessel('capsule.FCStd')
-# vessel.run_analysis()
-vessel.set_sketch_length('radius', 1.1)
-assert vessel.get_sketch_length('radius') == 1.1
-vessel.set_pressure(2.2)
-assert vessel.get_pressure() == 2.2
-vessel.set_mesh_length(3.3)
-assert vessel.get_mesh_length() == 3.3
-vessel.set_youngs_modulus(4.4)
-assert vessel.get_youngs_modulus() == 4.4
-vessel.set_poisson_ratio(5.5)
-assert vessel.get_poisson_ratio() == 5.5
-vessel.set_tensile_strength(6.6)
-assert vessel.get_tensile_strength() == 6.6
+vessel.run_analysis()
 vessel.print_info()
