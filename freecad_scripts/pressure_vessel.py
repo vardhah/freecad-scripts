@@ -34,16 +34,8 @@ class PressureVessel(object):
         print("Opening:", filename)
         self.doc = FreeCAD.open(filename)
 
-        self.fea = FemToolsCcx(
-            self.doc.getObject('Analysis'),
-            self.doc.getObject('SolverCcxTools'))
-
-        self.fea.update_objects()
-        self.fea.setup_working_dir()
-        self.fea.setup_ccx()
-        err = self.fea.check_prerequisites()
-        if err:
-            raise ValueError("FEM error: " + err)
+        if self.doc.getObject('FEMMeshGmsh').FemMesh.NodeCount:
+            print("WARNING: clean the mesh in the model to save space")
 
     def print_info(self):
         """
@@ -73,6 +65,16 @@ class PressureVessel(object):
         print("  tensile_strength =", obj.Material['UltimateTensileStrength'])
         print("  density =", obj.Material['Density'])
 
+        obj = self.doc.getObject('FEMMeshGmsh').FemMesh
+        if obj:
+            print("Mesh properties:")
+            print("  nodes =", obj.NodeCount)
+            print("  edges =", obj.EdgeCount)
+            print("  faces =", obj.FaceCount)
+            print("  volumes =", obj.VolumeCount)
+        else:
+            print("Mesh properties: none")
+
         obj = self.doc.getObject('CCX_Results')
         if obj:
             print("FEM results:")
@@ -82,7 +84,7 @@ class PressureVessel(object):
                 max(obj.DisplacementLengths)))
             print("  has_failed =", "true" if self.has_failed() else "false")
         else:
-            print("FEM Results: None")
+            print("FEM Results: none")
 
     @staticmethod
     def print_properties(obj):
@@ -176,7 +178,6 @@ class PressureVessel(object):
         return Units.Quantity(obj.Material['Density']).getValueAs('kg/m^3')
 
     def run_analysis(self):
-        self.fea.purge_results()
         if self.doc.getObject('ccx_dat_file'):
             self.doc.removeObject('ccx_dat_file')
 
@@ -184,24 +185,32 @@ class PressureVessel(object):
 
         if self.debug:
             print("Running GMSH mesher ...", end=' ', flush=True)
-        mesher = GmshTools(
-            self.doc.getObject('FEMMeshGmsh'))
+        mesher = GmshTools(self.doc.getObject('FEMMeshGmsh'))
         err = mesher.create_mesh()
         if err:
-            raise ValueError("Meshing error: " + err)
+            raise ValueError(err)
         obj = self.doc.getObject('FEMMeshGmsh').FemMesh
         if self.debug:
             print(obj.NodeCount, "nodes,",
-                  obj.EdgeCount, "edges",
+                  obj.EdgeCount, "edges,",
                   obj.FaceCount, "faces,",
                   obj.VolumeCount, "volumes")
 
         if self.debug:
             print("Running FEM analysis ...", end=' ', flush=True)
-        self.fea.update_objects()
-        self.fea.write_inp_file()
-        self.fea.ccx_run()
-        self.fea.load_results()
+        fea = FemToolsCcx(
+            self.doc.getObject('Analysis'),
+            self.doc.getObject('SolverCcxTools'))
+        fea.purge_results()
+        fea.update_objects()
+        fea.setup_working_dir()
+        fea.setup_ccx()
+        err = fea.check_prerequisites()
+        if err:
+            raise ValueError("FEM error: " + err)
+        fea.write_inp_file()
+        fea.ccx_run()
+        fea.load_results()
         obj = self.doc.getObject('CCX_Results')
         assert obj.ResultType == 'Fem::ResultMechanical'
         if self.debug:
@@ -245,8 +254,7 @@ def run(args=None):
     args = parser.parse_args(args)
 
     vessel = PressureVessel(args.model)
-    vessel.set_pressure(1.0)
-    vessel.set_sketch_length('radius', 30)
+    # vessel.print_info()
     vessel.run_analysis()
     vessel.print_info()
 
