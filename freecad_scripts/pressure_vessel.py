@@ -36,6 +36,8 @@ class PressureVessel(object):
 
         if self.doc.getObject('FEMMeshGmsh').FemMesh.NodeCount:
             print("WARNING: clean the mesh in the model to save space")
+        if self.doc.getObject('CCX_Results'):
+            print("WARNING: remove the CCX results from the model to save space")
 
     def print_info(self):
         """
@@ -177,10 +179,22 @@ class PressureVessel(object):
         obj = self.doc.getObject('MaterialSolid')
         return Units.Quantity(obj.Material['Density']).getValueAs('kg/m^3')
 
-    def run_analysis(self):
+    def clean(self):
+        """
+        Removes all temporary artifacts from the model.
+        """
+        if self.doc.getObject('CCX_Results'):
+            self.doc.removeObject('CCX_Results')
+        if self.doc.getObject('ResultMesh'):
+            self.doc.removeObject('ResultMesh')
         if self.doc.getObject('ccx_dat_file'):
             self.doc.removeObject('ccx_dat_file')
 
+    def run_analysis(self):
+        """
+        Set the various parameters, then call this method and query the results.
+        """
+        self.clean()
         self.doc.recompute()
 
         if self.debug:
@@ -255,6 +269,9 @@ def run(args=None):
 
     vessel = PressureVessel(args.model)
     # vessel.print_info()
+    vessel.run_analysis()
+    vessel.print_info()
+    vessel.set_pressure(2 * vessel.get_pressure())
     vessel.run_analysis()
     vessel.print_info()
 
