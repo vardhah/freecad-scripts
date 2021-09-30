@@ -43,6 +43,9 @@ for lib in femtools_libs:
         path = os.path.dirname(lib)
         if path not in sys.path:
             sys.path.append(path)
+        path = os.path.abspath(os.path.join(lib, '..', '..'))
+        if path not in sys.path:
+            sys.path.append(path)
         path = os.path.abspath(os.path.join(lib, '..', '..', '..', 'Ext'))
         if path not in sys.path:
             sys.path.append(path)
