@@ -27,8 +27,6 @@ def run():
     parser.add_argument('command', nargs='?', help="""
     pressure-vessel
     """)
-    parser.add_argument('--info', action='store_true',
-                        help="prints out the FreeCAD library path")
     args = parser.parse_args(sys.argv[1:2])
 
     # hack the program name for nested parsers
@@ -36,12 +34,9 @@ def run():
         sys.argv[0] += ' ' + args.command
         args.command = args.command.replace('_', '-')
 
-    if args.info:
-        print("FreeCAD library path:", libs.PATH)
-
     if args.command == 'pressure-vessel':
         pressure_vessel.run(args=sys.argv[2:])
-    elif not args.info:
+    else:
         parser.print_help()
 
 

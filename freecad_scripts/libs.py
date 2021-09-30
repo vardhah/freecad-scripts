@@ -20,17 +20,35 @@ import sys
 # https://wiki.freecadweb.org/Embedding_FreeCAD
 freecad_libs = [
     '/usr/local/lib/FreeCAD.so',
+    '/usr/lib/freecad-python3/lib/FreeCAD.so',
 ]
 for lib in freecad_libs:
     if os.path.exists(lib):
-        PATH = os.path.dirname(lib)
-        if PATH not in sys.path:
-            sys.path.append(PATH)
+        path = os.path.dirname(lib)
+        if path not in sys.path:
+            sys.path.append(path)
         break
 else:
     raise ValueError("FreeCAD library was not found!")
 
 import FreeCAD                              # noqa
 from FreeCAD import Units                   # noqa
+
+femtools_libs = [
+    '/usr/local/Mod/Fem/femtools',
+    '/usr/share/freecad/Mod/Fem/femtools',
+]
+for lib in femtools_libs:
+    if os.path.exists(lib):
+        path = os.path.dirname(lib)
+        if path not in sys.path:
+            sys.path.append(path)
+        path = os.path.abspath(os.path.join(lib, '..', '..', '..', 'Ext'))
+        if path not in sys.path:
+            sys.path.append(path)
+        break
+else:
+    raise ValueError("femtools library was not found!")
+
 from femtools.ccxtools import FemToolsCcx   # noqa
 from femmesh.gmshtools import GmshTools     # noqa
