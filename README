@@ -1,0 +1,10 @@
+# FreeCAD scripts
+
+## Create a docker container
+
+- Clone the `freecad_scripts` repository and then run `docker build -t symbench:freecad-scripts .`.
+
+## Usage on your local machine
+
+- Make sure that you have the `freecad-python3` and `gmsh` packages installed. On ubuntu you would run the command `sudo apt-get install freecad-python3 gmsh`.
+- Clone the `freecad_scripts` repository and install it with `pip3 install -e .`. This will allow you to update the code (e.g. with `git pull`) without reinstallation.

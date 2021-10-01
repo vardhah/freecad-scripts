@@ -302,7 +302,7 @@ def run(args=None):
 
     vessel = PressureVessel(args.model)
     # vessel.print_info()
-    # vessel.run_analysis()
+    vessel.run_analysis()
     vessel.print_info()
 
 
