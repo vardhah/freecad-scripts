@@ -18,4 +18,4 @@ COPY --chown=ubuntu:ubuntu . /home/ubuntu
 RUN pip3 install -e .
 ENV PATH "$PATH:/home/ubuntu/.local/bin"
 
-CMD ["jupyter-notebook", "--no-browser"]
+CMD ["jupyter-notebook", "--no-browser", "--ip=0.0.0.0"]

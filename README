@@ -3,11 +3,11 @@
 ## Usage with a docker container
 
 - Clone the `freecad_scripts` repository and then run `docker build -t symbench:freecad-scripts .`.
-- Run the container with `docker run -p 8888:8888 --rm symbench:freecad-scripts` and connect to it using your browser.
+- Run the container with `docker run --rm -p 8888:8888 symbench:freecad-scripts` and connect to it using your browser.
 - Use `import freecad_scripts` to import the library and access its internals.
 
 ## Usage on your local machine
 
-- Make sure that you have the `freecad-python3` and `gmsh` packages installed. On ubuntu you would run the command `sudo apt-get install freecad-python3 gmsh`.
+- Make sure that you have the `freecad-python3` (version 0.19) and `gmsh` packages installed. On ubuntu you would run the command `sudo apt-get install freecad-python3 gmsh`.
 - Clone the `freecad_scripts` repository and install it with `pip3 install -e .`. This will allow you to update the code (e.g. with `git pull`) without reinstallation.
 - Use `freecad-scripts --help` to list the supported subcommands.
