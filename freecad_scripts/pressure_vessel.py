@@ -98,7 +98,7 @@ class PressureVessel(object):
                 self.get_vonmises_stress()))
             print("  tresca_stress = {} MPa".format(
                 self.get_tresca_stress()))
-            print("  displacement = {} m".format(
+            print("  max_displacement = {} m".format(
                 self.get_max_displacement()))
             print("  has_failed =", self.get_has_failed())
         else:

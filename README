@@ -4,7 +4,7 @@
 
 - Download and run the container with `docker run --pull always --rm -p 8888:8888 symbench/freecad-scripts`.
 - Connect to the jupyter server within the container using your browser at `https://127.0.0.1:8888/?token...`
-- Look at the `models/pv_example.ipynb` example how to use the `freecad_scripts` library.
+- Look at the `models/pv_example.ipynb` example on how to use the `freecad_scripts` library.
 
 ## Usage on your local machine
 
