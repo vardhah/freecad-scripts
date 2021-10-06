@@ -62,8 +62,7 @@ class PressureVessel(object):
         for c in obj.Constraints:
             if not c.Name:
                 continue
-            print("  {:} = {:f} m".format(
-                c.Name, self.sketch_get_length(c.Name)))
+            print("  {} = {} m".format(c.Name, self.sketch_get_length(c.Name)))
 
         print("Body properties:")
         print("  body_area = {:.6f} m^2".format(self.get_body_area()))
@@ -95,13 +94,13 @@ class PressureVessel(object):
 
         if self.has_fem_properties():
             print("FEM results:")
-            print("  vonmises_stress = {:f} MPa".format(
+            print("  vonmises_stress = {} MPa".format(
                 self.get_vonmises_stress()))
-            print("  tresca_stress = {:f} MPa".format(
+            print("  tresca_stress = {} MPa".format(
                 self.get_tresca_stress()))
-            print("  displacement = {:f} m".format(
+            print("  displacement = {} m".format(
                 self.get_max_displacement()))
-            print("  has_failed =", "true" if self.get_has_failed() else "false")
+            print("  has_failed =", self.get_has_failed())
         else:
             print("FEM Results: none")
 
@@ -122,7 +121,7 @@ class PressureVessel(object):
 
     def sketch_get_length(self, param: str) -> float:
         obj = self.doc.getObject('Sketch')
-        return obj.getDatum(param).getValueAs('mm') * 1e-3
+        return float(obj.getDatum(param).getValueAs('mm')) * 1e-3
 
     def set_pressure(self, value: float):
         """
