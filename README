@@ -2,9 +2,12 @@
 
 ## Usage with a docker container
 
-- Download and run the container with `docker run --pull always --rm -p 8888:8888 symbench/freecad-scripts`.
-- Connect to the jupyter server within the container using your browser at `https://127.0.0.1:8888/?token...`
-- Look at the `models/pv_example.ipynb` example on how to use the `freecad_scripts` library.
+- Clone the `freecad_scripts` repository and then run `docker build -t symbench:freecad-scripts .`.
+- For persistent storage : (a) create volume : docker volume create myvol   
+- Run the container with persistent storage at myvol `docker run --rm --name freecad1 -p 8888:8888 -v myvol:/home/ubuntu/models symbench:freecad-scripts` 
+  and connect to it using your browser.  Here 'myvol' volume is mounted at 'models' folder of docker client i.e. whatever we write at models folder will be 
+  copied in myvol. myvol is stored in host compute location var/lib/docker/volumes/myvol/_data 
+- Use `import freecad_scripts` to import the library and access its internals.
 
 ## Usage on your local machine
 
