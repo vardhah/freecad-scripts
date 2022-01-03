@@ -453,7 +453,7 @@ class PressureVessel(object):
             'youngs_modulus', 'poisson_ratio', 'tensile_strength', 'density',
             'body_area', 'body_volume', 'body_mass', 'outer_area', 'outer_volume', 'inner_area', 'inner_volume',
             'node_count', 'edge_count', 'face_count', 'volume_count',
-            'vonmises_stress', 'tresca_stress', 'max_displacement', 'has_failed'
+            'vonmises_stress', 'tresca_stress', 'max_displacement', 'has_failed','graph'
         ])
         #print('update field name is:', fieldnames)
         writer = csv.DictWriter(file, fieldnames)
@@ -464,7 +464,7 @@ class PressureVessel(object):
 
     def csv_write_row(self, writer: csv.DictWriter):
         row = {name: self.get(name) for name in writer.fieldnames}
-        print('row is:',row)
+        #print('row is:',row)
         writer.writerow(row)
         #print('done writing')
 
