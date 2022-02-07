@@ -4,12 +4,14 @@ Current designed space:(units in meter)
    depth     : 100-6000(step=100)
    
 Desired designed space:(units in meter) 
-   thickness : 0.01-0.40 (step=0.01)
+   thickness : 0.01-0.50 (step=0.01)
    length    : 1.0-5.0 (step=0.2)
    depth     : 100-6000(step=100)
-     => total design space : 40*20*60= 48000
+     => total design space : 50*20*60= 60000
      
   current material : Al 6061-T6
   types of material : Al6061-T6 , Titanium Ti6A14V  , Stainlesssteel 304, Al7075-T73 , Glass,LowExp 
   
-  total design space : 5* 48000= 240000 design points
+  total design space : 60000 design points
+  
+  design_points.csv => [index,depth,length,thickness])
